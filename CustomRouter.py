@@ -89,11 +89,11 @@ class UDPRouter(Node):
             info(f"{self.name}: Destination {dest} not found in routing table\n")
 
     def receive_packet(self, packet):
-        if packet[IP].dst == self.ip:
+        header = read_header(packet) # get header in order to process packet
+        
+        if header["dst"] == self.ip: #if the packet's destination is the router
             info(f"{self.name}: Packet received for local processing\n")
             # Process packet here
-            
-            header = read_header(packet) # get header in order to process packet
             #check what type it is
             if(header.type == 1): 
                 #hello packet
@@ -109,15 +109,13 @@ class UDPRouter(Node):
                 #check if this router is the intended destination
                 #if it is, we also have to check if the data field contains a multicast packet
                 data = read_data(packet)
-                
+
                 print(4)
             elif(header.type == 5):
                 #LSA packet
                 print(5)
             else:
                 print("error!")
-
-
         else:
             self.packet_queue.append(packet)
 
