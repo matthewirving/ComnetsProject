@@ -28,6 +28,8 @@ class UDPRouter(Node):
         super(UDPRouter, self).config(**params)
         self.cmd('sysctl -w net.ipv4.ip_forward=1')
 
+    # this has to be changed, we can't use the net topology in the implementation of the routers, as we don't know what it is. 
+    # We have to discover topology with our routing protocol
     def get_links(self, net):
         links = {}
         for intf in self.intfList():
@@ -62,6 +64,7 @@ class UDPRouter(Node):
 
         return distance
 
+    #this also has to be changed, we can't use the net 
     def compute_routing_tables(self, net):
         graph = {}
         for n in net.hosts:
@@ -70,7 +73,8 @@ class UDPRouter(Node):
         self.routing_table = self.compute_shortest_paths(graph, self.name)
 
     def send_packet(self, packet):
-        dest = packet[IP].dst
+        header = read_header(packet)
+        dest = header["dst"]
         if dest in self.routing_table:
             nexthop = self.routing_table[dest]
             out_intf = None
@@ -109,6 +113,17 @@ class UDPRouter(Node):
                 #check if this router is the intended destination
                 #if it is, we also have to check if the data field contains a multicast packet
                 data = read_data(packet)
+
+                if(data[0] == 3): #if the first number in the data is a 3, it is the type field of a multicast packet
+                    #now we have to split the packets to unicast, and determine k closest destinations
+                    multiHeader = read_header(data)
+                    multiData = read_data(data)
+
+                    destList = [] # this will be an array containing all 3 destinations, sorted by closest first. We will have to implement a method.
+
+                    # send k packets to destinations. Currently "src" field is the original src where the multicast packet was sent from, SEQ = 1, & TTL = 10
+                    for i in range(0, multiHeader["kval"]):
+                        send_packet(self, create_unicast_packet(1, 10, header["src"], destList[i], multiData))
 
                 print(4)
             elif(header.type == 5):
