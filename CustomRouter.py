@@ -124,6 +124,8 @@ class UDPRouter(Node):
                     # send k packets to destinations. Currently "src" field is the original src where the multicast packet was sent from, SEQ = 1, & TTL = 10
                     for i in range(0, multiHeader["kval"]):
                         send_packet(self, create_unicast_packet(1, 10, header["src"], destList[i], multiData))
+                else:
+                    print(data)
 
                 print(4)
             elif(header.type == 5):
