@@ -69,7 +69,15 @@ def read_header(pkt):
     elif rawPacketType == 3:
         #multicast pkt type
         header = pkt[0:16]
-        pkttype, seq, TTL, src, dst = struct.unpack('BBBB4s4s4s', header)
+        pkttype, seq, TTL, kval, dst1, dst2, dst3 = struct.unpack('BBBB4s4s4s', header)
+
+        dst1 = socket.inet_ntoa(dst1)
+        dst2 = socket.inet_ntoa(dst2)
+        dst3 = socket.inet_ntoa(dst3)
+
+        return {"type": pkttype, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
+
+        return 
 
     elif rawPacketType == 4:
         #unicast pkt type
@@ -79,7 +87,7 @@ def read_header(pkt):
         src = socket.inet_ntoa(src)
         dst = socket.inet_ntoa(dst)
 
-        return pkttype, seq, TTL, src, dst
+        return {"type": pkttype, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
         
     elif rawPacketType == 5:
         #LSA packet type
@@ -87,7 +95,7 @@ def read_header(pkt):
         
         src = socket.inet_ntoa(src)
 
-        return pkttype, seq, TTL, src, hops, advRoute, LSSeq, CRC
+        return {"type": pkttype, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
 
     else:
         return "error!"

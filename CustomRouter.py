@@ -11,6 +11,7 @@ from mininet.node import RemoteController, Controller, OVSKernelSwitch, Node, Ho
 from mininet.link import TCLink, Link
 from mininet.cli import CLI
 from mininet.util import dumpNodeConnections
+import packet
 import heapq
 import sys
 from scapy.all import *
@@ -91,6 +92,8 @@ class UDPRouter(Node):
         if packet[IP].dst == self.ip:
             info(f"{self.name}: Packet received for local processing\n")
             # Process packet here
+            
+            header = read_header(packet) # get header in order to process packet
         else:
             self.packet_queue.append(packet)
 

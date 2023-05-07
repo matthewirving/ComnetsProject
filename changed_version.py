@@ -74,7 +74,7 @@ def get_links(node, net):
         for dest in ['d1', 'd2', 'd3']:
             if dest != node.name:
                 link = node.connectionsTo(net.get(dest))[0]
-                  cost = int(link[0].params['bw'])                                   #added "params"
+                cost = int(link[0].params['bw'])                                   #added "params"
                 links[dest] = cost
     return links
 
