@@ -22,30 +22,38 @@ import asyncore
 
 def create_LSA_packet(seq, TTL, src, hops, advRoute, LSSeq, CRC):
     #Type(1), Len(4), Seq(1), TTL(1), src(1), hops(1), advRoute(4), LSSeq(4), CRC(1)
-    #header (18)
+    #header (41)
+    len = 41
     pkttype = 5 # 5 is defined as the pkt type for LSA packets
-    header = struct.pack('BBB4sBLLB', pkttype, seq, TTL, socket.inet_aton(src), hops, advRoute, LSSeq, CRC)
+    header = struct.pack('BLBB4sBLLB', pkttype, len, seq, TTL, socket.inet_aton(src), hops, advRoute, LSSeq, CRC)
     return header
 
 def create_unicast_packet(seq, TTL, src, dst, data):
-    #Type(1), Seq(1), TTL(1), src(4), dst(4), data(1-1480)
-    #header (11) + data(1-1480) -> 12 - 1491
-
+    #Type(1), Length(4), Seq(1), TTL(1), src(4), dst(4), data(1-1480)
+    #header (26) + data(1-1480) -> 27 - 1506
     pkttype = 4 # 4 is defined as the pkttype for unicast packets
 
-    header = struct.pack('BBB4s4s', pkttype, seq, TTL, socket.inet_aton(src), socket.inet_aton(dst))
-    return header + bytes(data, 'utf-8')
+    byteData = bytes(data, 'utf-8')
+
+    len = 26 + len(byteData)
+    
+
+    header = struct.pack('BLBB4s4s', pkttype, len, seq, TTL, socket.inet_aton(src), socket.inet_aton(dst))
+    return header + byteData
     
 
 def create_multicast_packet(seq, TTL, kval, dst1, dst2, dst3, data):
     """Create new packet with given fields"""
-    #Type(1), Seq(1), TTL(1), K-val(1), Dest1(4), Dest2(4), Dest3(4), Data(1-1480)
-    #header (16) + data(1-1480) -> 17 - 1496
-
+    #Type(1), Len(4), Seq(1), TTL(1), K-val(1), Dest1(4), Dest2(4), Dest3(4), Data(1-1480)
+    #header (31) + data(1-1480) -> 32 - 1511
     pkttype = 3 # 3 is defined as the pkttype for multicast packets
 
-    header = struct.pack('BBBB4s4s4s', pkttype, seq, TTL, kval, socket.inet_aton(dst1), socket.inet_aton(dst2), socket.inet_aton(dst3))
-    return header + bytes(data, 'utf-8')
+    byteData = bytes(data, 'utf-8')
+
+    len = 31 + len(byteData)
+
+    header = struct.pack('BLBBB4s4s4s', pkttype, len, seq, TTL, kval, socket.inet_aton(dst1), socket.inet_aton(dst2), socket.inet_aton(dst3))
+    return header + byteData
 
 
 def read_header(pkt):
@@ -68,34 +76,34 @@ def read_header(pkt):
 
     elif rawPacketType == 3:
         #multicast pkt type
-        header = pkt[0:16]
-        pkttype, seq, TTL, kval, dst1, dst2, dst3 = struct.unpack('BBBB4s4s4s', header)
+        header = pkt[0:31]
+        pkttype, len, seq, TTL, kval, dst1, dst2, dst3 = struct.unpack('BLBBB4s4s4s', header)
 
         dst1 = socket.inet_ntoa(dst1)
         dst2 = socket.inet_ntoa(dst2)
         dst3 = socket.inet_ntoa(dst3)
 
-        return {"type": pkttype, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
+        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
 
         return 
 
     elif rawPacketType == 4:
         #unicast pkt type
-        header = pkt[0:11] #correct size for unicast
-        pkttype, seq, TTL, src, dst = struct.unpack('BBB4s4s', header)
+        header = pkt[0:26] #correct size for unicast
+        pkttype, len, seq, TTL, src, dst = struct.unpack('BLBB4s4s', header)
 
         src = socket.inet_ntoa(src)
         dst = socket.inet_ntoa(dst)
 
-        return {"type": pkttype, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
+        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
         
     elif rawPacketType == 5:
         #LSA packet type
-        pkttype, seq, TTL, src, hops, advRoute, LSSeq, CRC = struct.unpack('BBB4sBLLB', header)
+        pkttype, len, seq, TTL, src, hops, advRoute, LSSeq, CRC = struct.unpack('BLBB4sBLLB', header)
         
         src = socket.inet_ntoa(src)
 
-        return {"type": pkttype, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
+        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
 
     else:
         return "error!"
@@ -118,10 +126,10 @@ def read_data(pkt):
         print(2)
     elif pkttype == 3:
         #multicast pkttype
-        data = pkt[16:]
+        data = pkt[31:]
     elif pkttype == 4:
         #unicast pkttype
-        data = pkt[11:]
+        data = pkt[26:]
     elif pkttype == 5:
         data = 0
     
