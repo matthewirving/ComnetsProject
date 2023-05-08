@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.log import setLogLevel, info
@@ -17,22 +11,10 @@ import sys
 
 
 class UDPRouter(Node):
-    def __init__(self, id, ip, *args, **kwargs):
-        super(UDPRouter, self).__init__(id, *args, **kwargs)
-        self.LSSEQ = 0
-        self.id = id
+    def __init__(self, name, ip, *args, **kwargs):
+        super(UDPRouter, self).__init__(name, *args, **kwargs)
         self.ip = ip
-        self.map_table = {}
-        '''
-        {"r1" : {"Neighbors": [r2, r3], "LSSEQ": 1}}
-        {"r2" : {"Neighbors": [r1, r3], "LSSEQ": 1}}
-        {"r3": {"Neighbors": [r1, r2, r4], "LSSEQ": 2}}
-        {"r4": {"Neighbors": [r3, d1], "LSSEQ": 1}}
-        '''
         self.routing_table = {}
-        '''
-        {"r1": {"cost": 3, "next_hop": "r2"}}
-        '''
         self.packet_queue = []
 
     def config(self, **params):
@@ -72,83 +54,14 @@ class UDPRouter(Node):
                     heapq.heappush(heap, (new_dist, neighbor))
 
         return distance
-    
-    def get_immediate_neighbors(self):
-        
-        neighbors = {}
-        for intf in self.intfList():
-            link = self.connectionsTo()
-            if link:
-                neighbor = link[0][1]
-                neighbors[neighbor.name] = neighbor
-        return neighbors
-    '''
+
     def compute_routing_tables(self, net):
         graph = {}
         for n in net.hosts:
             if n != self:
                 graph[n.name] = self.get_links(net)
         self.routing_table = self.compute_shortest_paths(graph, self.name)
-    '''
 
-    def dijstrka (self):
-        ans = {}
-        visited = []
-        routers = self.map_table.keys()
-        ans[self.name] = (0, self.name)
-        curr = self.name
-        for i in range(routers): 
-            neighboor = self.map_table[curr]['Neighbors']
-            for j in neighboor: 
-                if j not in ans.keys(): 
-                    ans[j] = (1, curr)
-                else: 
-                    if ans[curr][0] + 1 < ans[j][0]:
-                        ans[j] = (ans[curr] + 1, curr)
-
-            visited.insert(curr)
-            tab = ans.keys()
-            tab.remove(v for v in visited)
-            c = 100
-            for t in tab: 
-                if c > ans[t][0]:
-                    c = ans[t][0]
-            
-            for t in tab: 
-                if c == ans[t][0]:
-                    curr = t
-
-        return ans
-
-    def compute_routing_table(self, table):
-        self.routing_table = self.dijstrka()
-    
-    '''''''''
-    {
-        routers : (cost, previousRouter)
-    }
-    '''
-
-    
-    def send_lsa(self, seq_num, ttl=10):
-        neighbors = self.get_immediate_neighbors()
-        neighbor_names = list(neighbors.keys())
-        lsa_data = {"Neighbors":neighbor_names, "LSSEQ": self.LSSEQ}
-        # {"r1": {"Neighbors" : [r2, r3], "LSSEQ": 1}}
-        
-        
-        lsa_packet = create_LSA_packet(seq_num, ttl, self.ip, 5, self.id, self.LSSEQ, 5, lsa_data)
-        self.LSSEQ += 1
-        
-        self.lsa_flood(lsa_packet)
-
-    def lsa_flood(self, packet):
-        #neighbors = self.get_immediate_neighbors()
-        for intf in self.intfList():
-            self.send(intf, packet)
-        
-
-        
     def send_packet(self, packet):
         header = read_header(packet)
         dest = header['dst']
@@ -168,16 +81,6 @@ class UDPRouter(Node):
                 info(f"{self.name}: No valid interface found for {dest}\n")
         else:
             info(f"{self.name}: Destination {dest} not found in routing table\n")
-
-    def resolve_ip_to_id(self, ip):
-        if ip == '10.0.0.9':
-            return "d1"
-        elif ip == '10.0.0.10':
-            return "d2"
-        elif ip == '10.0.0.11':
-            return "d3"
-        elif ip == '10.0.0.1':
-            return "s"
 
     def receive_packet(self, packet):
         header = read_header(packet)
@@ -204,16 +107,8 @@ class UDPRouter(Node):
                     multiHeader = read_header(pkt_data)
                     multiData = read_data(pkt_data)
 
-                    
-                    destList = [self.resolve_ip_to_id(self, multiHeader["dst1"]), self.resolve_ip_to_id(self, multiHeader["dst2"]), self.resolve_ip_to_id(self, multiHeader["dst3"])] # this will be an array containing all 3 destinations, sorted by closest first. We will have to implement a method
-                    r_table = self.routing_table
-                    for i in range(len(destList)):
-                        for j in range(0, len(destList) - i - 1):
-                            if(r_table[destList[j]][0] > r_table[destList[j + 1]][0]):
-                                temp = destList[j]
-                                destList[j] = destList[j+1]
-                                destList[j + 1] = temp
-                    
+                    destList = [] # this will be an array containing all 3 destinations, sorted by closest first. We will have to implement a method.
+
                     # send k packets to destinations. Currently "src" field is the original src where the multicast packet was sent from, SEQ = 1, & TTL = 10
                     for i in range(0, multiHeader["kval"]):
                         self.send_packet(self, create_unicast_packet(1, 10, header["src"], destList[i], multiData))
@@ -223,25 +118,19 @@ class UDPRouter(Node):
 
 
             elif pkt_type == 5:  # LSA packet
-                #advertising route = ID of router, we will just use the name it's defined as
-                incomingID = header["advRoute"]
-                if self.map_table.get(incomingID) is not None or self.map_table["advRoute"]["LSSEQ"] < header["LSSeq"]: # incoming LSA packet ID exists in map table or the existing sequence number is lower
-                    self.map_table["advRoute"] = read_data(packet)
-                    if header["TTL"] > 1:
-                        modPacket = create_LSA_packet(header["seq"], header["TTL"] - 1, self.ip, header["hops"] + 1, header["advRoute"], header["LSSeq"], header["CRC"], read_data(packet))
-                        self.lsa_flood(self, modPacket)
+                
+                pass
             else:
                 # Invalid packet type
                 print("Invalid packet type")
         else:
             print("Error reading packet header")
 
-    
-
-            
-
-        
     def process_packet_queue(self):
         for packet in self.packet_queue:
             self.send_packet(packet)
         self.packet_queue = []
+
+    #def read_header(self, packet):
+        # Replace this with the appropriate function
+

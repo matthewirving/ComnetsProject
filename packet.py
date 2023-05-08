@@ -20,13 +20,16 @@ import asyncore
 # documentation reference https://docs.google.com/document/d/1meTQd49NvTkn1GZNhilRDmXpstn27qb0XuhDAtOjkKQ/edit#
 
 
-def create_LSA_packet(seq, TTL, src, hops, advRoute, LSSeq, CRC):
+def create_LSA_packet(seq, TTL, src, hops, advRoute, LSSeq, CRC, data):
     #Type(1), Len(4), Seq(1), TTL(1), src(1), hops(1), advRoute(4), LSSeq(4), CRC(1)
     #header (41)
-    length = 41
+    
+    byteData = bytes(data, 'utf-8')
+    length = 41 + len(byteData)
+    
     pkttype = 5 # 5 is defined as the pkt type for LSA packets
     header = struct.pack('BLBB4sBLLB', pkttype, length, seq, TTL, socket.inet_aton(src), hops, advRoute, LSSeq, CRC)
-    return header
+    return header + byteData
 
 def create_unicast_packet(seq, TTL, src, dst, data):
     #Type(1), Length(4), Seq(1), TTL(1), src(4), dst(4), data(1-1480)
