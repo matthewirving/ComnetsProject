@@ -11,6 +11,7 @@ from mininet.node import RemoteController, Controller, OVSKernelSwitch, Node, Ho
 from mininet.link import TCLink, Link
 from mininet.cli import CLI
 from mininet.util import dumpNodeConnections
+from packet import read_data, read_header, create_LSA_packet, create_multicast_packet, create_unicast_packet
 import heapq
 import sys
 
@@ -68,7 +69,7 @@ class UDPRouter(Node):
         self.routing_table = self.compute_shortest_paths(graph, self.name)
 
     def send_packet(self, packet):
-        header = self.read_header(packet)
+        header = read_header(packet)
         dest = header['dst']
         if dest in self.routing_table:
             nexthop = self.routing_table[dest]
@@ -92,14 +93,38 @@ class UDPRouter(Node):
         if header is not None:
             # Process the packet based on its type
             pkt_type = header["type"]
+            pkt_data = read_data(packet)
             if pkt_type == 3:  # Multicast packet
                 # Process multicast packet
                 pass
             elif pkt_type == 4:  # Unicast packet
                 # Process unicast packet
-                pass
+                # must determine if data field holds a multicast packet
+                if header["dst"] != self.ip:
+                    if header["TTL"] > 0:
+                        newPacket = create_unicast_packet(header["seq"], header["TTL"] - 1, header["src"], header["dst"], pkt_data)
+                        self.send_packet(self, newPacket)
+                    else:
+                        #drop the packet since TTL is low
+                        pass
+                
+                elif pkt_data[0] == 3: # this means the first byte in data is 3, which is the value of the type field for a multicast packet
+                    # now we have to split the packets to unicast, and determine k closest destinations
+                    multiHeader = read_header(pkt_data)
+                    multiData = read_data(pkt_data)
+
+                    destList = [] # this will be an array containing all 3 destinations, sorted by closest first. We will have to implement a method.
+
+                    # send k packets to destinations. Currently "src" field is the original src where the multicast packet was sent from, SEQ = 1, & TTL = 10
+                    for i in range(0, multiHeader["kval"]):
+                        self.send_packet(self, create_unicast_packet(1, 10, header["src"], destList[i], multiData))
+                
+                else:
+                    print(f"{self.name} Packet recieved")
+
+
             elif pkt_type == 5:  # LSA packet
-                # Process LSA packet
+                
                 pass
             else:
                 # Invalid packet type

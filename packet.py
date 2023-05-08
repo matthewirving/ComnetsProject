@@ -83,7 +83,7 @@ def read_header(pkt):
         dst2 = socket.inet_ntoa(dst2)
         dst3 = socket.inet_ntoa(dst3)
 
-        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
+        return {"type": pkttype, "length": length, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
 
     elif rawPacketType == 4:
         #unicast pkt type
@@ -93,7 +93,7 @@ def read_header(pkt):
         src = socket.inet_ntoa(src)
         dst = socket.inet_ntoa(dst)
 
-        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
+        return {"type": pkttype, "length": length, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
         
     elif rawPacketType == 5:
         #LSA packet type
@@ -102,7 +102,7 @@ def read_header(pkt):
         
         src = socket.inet_ntoa(src)
         advRoute = socket.inet_ntoa(advRoute)
-        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
+        return {"type": pkttype, "length": length, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
 
     else:
         return "error!"
@@ -133,17 +133,3 @@ def read_data(pkt):
     
     return data
 
-def main():
-    
-    myPkt = create_unicast_packet(1, 5, "192.168.1.5", "192.168.1.7", "WHAAAT")
-    print("myPkt: ", myPkt)
-    secondPkt = create_unicast_packet(5, 3, "172.10.0.2", "10.0.0.2", "DATATIME")
-    print("secondPkt: ", secondPkt)
-    pkttype, length, seq, TTL, src, dst = read_header(myPkt)
-    temp = read_data(myPkt)
-    print("temp: ",temp)
-    print("stuff", struct.calcsize('BBB4s4s'), "second ", struct.calcsize('BBB15s15s'))
-    test = struct.pack('BBB4s4s', 4, 1, 5, socket.inet_aton("192.168.1.5"), socket.inet_aton("192.168.1.7"))
-    print("test: ", test)
-if __name__ == "__main__":
-    main()
