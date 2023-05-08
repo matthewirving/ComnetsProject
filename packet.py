@@ -85,8 +85,6 @@ def read_header(pkt):
 
         return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
 
-        return 
-
     elif rawPacketType == 4:
         #unicast pkt type
         header = pkt[0:26] #correct size for unicast
@@ -99,17 +97,17 @@ def read_header(pkt):
         
     elif rawPacketType == 5:
         #LSA packet type
+        header = pkt[0:41]
         pkttype, length, seq, TTL, src, hops, advRoute, LSSeq, CRC = struct.unpack('BLBB4sBLLB', header)
         
         src = socket.inet_ntoa(src)
-
+        advRoute = socket.inet_ntoa(advRoute)
         return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
 
     else:
         return "error!"
 
-
-    return
+    return None
 
 def read_data(pkt):
     #change bytes to account for network encapsulations
@@ -139,20 +137,11 @@ def main():
     
     myPkt = create_unicast_packet(1, 5, "192.168.1.5", "192.168.1.7", "WHAAAT")
     secondPkt = create_unicast_packet(5, 3, "172.10.0.2", "10.0.0.2", "DATATIME")
-
-
-    
-    pkttype, seq, TTL, src, dst = read_header(myPkt)
-
-    #print(pkttype, seq, TTL, src, dst)
-
+    pkttype, length, seq, TTL, src, dst = read_header(myPkt)
+    print(pkttype, seq, TTL, src, dst)
     temp = read_data(myPkt)
-
-    #print("stuff", struct.calcsize('BBB4s4s'), "second ", struct.calcsize('BBB15s15s'))
-    #test = struct.pack('BBB4s4s', 4, 1, 5, socket.inet_aton("192.168.1.5"), socket.inet_aton("192.168.1.7"))
-    
-
-    
+    print("stuff", struct.calcsize('BBB4s4s'), "second ", struct.calcsize('BBB15s15s'))
+    test = struct.pack('BBB4s4s', 4, 1, 5, socket.inet_aton("192.168.1.5"), socket.inet_aton("192.168.1.7"))
 
 if __name__ == "__main__":
     main()
