@@ -23,9 +23,9 @@ import asyncore
 def create_LSA_packet(seq, TTL, src, hops, advRoute, LSSeq, CRC):
     #Type(1), Len(4), Seq(1), TTL(1), src(1), hops(1), advRoute(4), LSSeq(4), CRC(1)
     #header (41)
-    len = 41
+    length = 41
     pkttype = 5 # 5 is defined as the pkt type for LSA packets
-    header = struct.pack('BLBB4sBLLB', pkttype, len, seq, TTL, socket.inet_aton(src), hops, advRoute, LSSeq, CRC)
+    header = struct.pack('BLBB4sBLLB', pkttype, length, seq, TTL, socket.inet_aton(src), hops, advRoute, LSSeq, CRC)
     return header
 
 def create_unicast_packet(seq, TTL, src, dst, data):
@@ -35,10 +35,10 @@ def create_unicast_packet(seq, TTL, src, dst, data):
 
     byteData = bytes(data, 'utf-8')
 
-    len = 26 + len(byteData)
+    length = 26 + len(byteData)
     
 
-    header = struct.pack('BLBB4s4s', pkttype, len, seq, TTL, socket.inet_aton(src), socket.inet_aton(dst))
+    header = struct.pack('BLBB4s4s', pkttype, length, seq, TTL, socket.inet_aton(src), socket.inet_aton(dst))
     return header + byteData
     
 
@@ -50,9 +50,9 @@ def create_multicast_packet(seq, TTL, kval, dst1, dst2, dst3, data):
 
     byteData = bytes(data, 'utf-8')
 
-    len = 31 + len(byteData)
+    length = 31 + len(byteData)
 
-    header = struct.pack('BLBBB4s4s4s', pkttype, len, seq, TTL, kval, socket.inet_aton(dst1), socket.inet_aton(dst2), socket.inet_aton(dst3))
+    header = struct.pack('BLBBB4s4s4s', pkttype, length, seq, TTL, kval, socket.inet_aton(dst1), socket.inet_aton(dst2), socket.inet_aton(dst3))
     return header + byteData
 
 
@@ -77,33 +77,33 @@ def read_header(pkt):
     elif rawPacketType == 3:
         #multicast pkt type
         header = pkt[0:31]
-        pkttype, len, seq, TTL, kval, dst1, dst2, dst3 = struct.unpack('BLBBB4s4s4s', header)
+        pkttype, length, seq, TTL, kval, dst1, dst2, dst3 = struct.unpack('BLBBB4s4s4s', header)
 
         dst1 = socket.inet_ntoa(dst1)
         dst2 = socket.inet_ntoa(dst2)
         dst3 = socket.inet_ntoa(dst3)
 
-        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
+        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "kval": kval, "dst1": dst1, "dst2": dst2, "dst3": dst3}
 
         return 
 
     elif rawPacketType == 4:
         #unicast pkt type
         header = pkt[0:26] #correct size for unicast
-        pkttype, len, seq, TTL, src, dst = struct.unpack('BLBB4s4s', header)
+        pkttype, length, seq, TTL, src, dst = struct.unpack('BLBB4s4s', header)
 
         src = socket.inet_ntoa(src)
         dst = socket.inet_ntoa(dst)
 
-        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
+        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "src": src, "dst": dst}
         
     elif rawPacketType == 5:
         #LSA packet type
-        pkttype, len, seq, TTL, src, hops, advRoute, LSSeq, CRC = struct.unpack('BLBB4sBLLB', header)
+        pkttype, length, seq, TTL, src, hops, advRoute, LSSeq, CRC = struct.unpack('BLBB4sBLLB', header)
         
         src = socket.inet_ntoa(src)
 
-        return {"type": pkttype, "len": len, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
+        return {"type": pkttype, "len": length, "seq": seq, "TTL": TTL, "src": src, "hops": hops, "advRoute": advRoute, "LSSeq": LSSeq, "CRC": CRC}
 
     else:
         return "error!"
